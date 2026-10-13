@@ -1,13 +1,13 @@
 {
   "name": "promptshield-ai",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": false,
   "type": "module",
-  "description": "Privacy-first prompt cleaner that detects and redacts sensitive data locally in the browser.",
+  "description": "Local-first privacy and security pre-check for prompts, supported text files and links.",
   "scripts": {
     "test": "node --test",
-    "check": "node --check dist/app.js && node --check dist/privacy-engine.js && node --test"
+    "check": "node --check dist/app.js && node --check dist/privacy-engine.js && node --check dist/security-engine.js && node --test"
   },
-  "keywords": ["ai", "privacy", "prompt", "security", "pii", "open-source"],
+  "keywords": ["ai", "privacy", "prompt", "security", "file-scanner", "link-checker", "pii", "open-source"],
   "license": "MIT"
 }

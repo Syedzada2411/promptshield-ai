@@ -1,199 +1,114 @@
-import { scanText, improvePrompt } from './privacy-engine.js?v=1.0.1';
+import { scanText, improvePrompt } from './privacy-engine.js?v=2.0.0';
+import { analyzeFileMetadata, analyzeUrl, scanFileContent } from './security-engine.js?v=2.0.0';
 
 const $ = selector => document.querySelector(selector);
-const promptInput = $('#promptInput');
-const scanButton = $('#scanButton');
-const sampleButton = $('#sampleButton');
-const clearButton = $('#clearButton');
-const charCount = $('#charCount');
-const promptType = $('#promptType');
-const emptyState = $('#emptyState');
-const resultContent = $('#resultContent');
-const findingList = $('#findingList');
-const findingCount = $('#findingCount');
-const safeOutput = $('#safeOutput');
-const improvedOutput = $('#improvedOutput');
-const riskScore = $('#riskScore');
-const riskMeter = $('#riskMeter');
-const toast = $('#toast');
-
+const $$ = selector => [...document.querySelectorAll(selector)];
+let currentLanguage = localStorage.getItem('promptshield-language') || 'en';
+if (currentLanguage === 'ur') currentLanguage = 'roman';
 let currentSafeText = '';
 let currentImprovedText = '';
-let currentLanguage = localStorage.getItem('promptshield-language') || 'en';
+let selectedFile = null;
+let cleanedFile = { text: '', name: '' };
+let safeLink = '';
 
 const translations = {
   en: {
-    eyebrow: 'Free • Open source • Local-first', heroLine1: 'Share prompts.', heroLine2: 'Not private data.',
-    heroText: 'PromptShield finds sensitive information before it reaches ChatGPT, Gemini, Claude, or any other AI tool. Your text never leaves this browser.',
-    startButton: 'Protect a prompt →', learnButton: 'See how it works', noLogin: 'No login', noApi: 'No API key', noUpload: 'No text uploaded', localScan: 'LOCAL SCAN', risk: 'RISK',
-    workspaceKicker: 'PRIVATE WORKSPACE', workspaceTitle: 'Clean your prompt in seconds', browserOnly: 'Processing stays in your browser',
-    inputTitle: 'Paste your prompt', sample: 'Try sample', clear: 'Clear', inputPrivacy: 'Input is never stored', promptTypeLabel: 'Prompt type',
-    typeGeneral: 'General', typeEmail: 'Email', typeResearch: 'Research', typeCode: 'Code / debugging', typeContent: 'Content creation', scanButton: 'Scan & protect',
-    resultsTitle: 'Review protected output', riskScore: 'Risk score', emptyTitle: 'Ready when you are', emptyText: 'Paste a prompt and run a local scan. Findings will appear here.',
-    foundLabel: 'Sensitive items found', protectionLabel: 'Protection', safePrompt: 'Safe prompt', improvedPrompt: 'Improved prompt', copySafe: 'Copy safe prompt', download: 'Download .txt', copyImproved: 'Copy improved prompt',
-    disclaimer: 'PromptShield catches common patterns, but no automated scanner is perfect. Always review the result before sharing it.',
-    howKicker: 'BUILT FOR EVERYDAY AI USE', howTitle: 'Private by design, simple by default', featureOneTitle: 'Detect', featureOneText: 'Find emails, phone numbers, CNICs, cards, IP addresses, API keys and secret-filled URLs.',
-    featureTwoTitle: 'Protect', featureTwoText: 'Replace private values with clear placeholders while keeping your prompt useful.', featureThreeTitle: 'Improve', featureThreeText: 'Turn the safe text into a structured prompt with a goal, requirements, and output format.',
-    privacyKicker: 'ZERO-SERVER PRIVACY', privacyTitle: 'Your prompt stays yours.', privacyText: 'The scanner runs entirely in your browser using transparent pattern-matching rules. There is no account, analytics payload, prompt database, or external AI request.',
-    privacyOne: 'Works without an AI API', privacyTwo: 'No prompt history or tracking', privacyThree: 'Readable, auditable open-source code',
-    openKicker: 'OPEN SOURCE, PUBLIC BENEFIT', openTitle: 'Help make everyday AI safer.', openText: 'PromptShield AI is maintained by Syed Areeb Ali under the AI Tool Insider initiative. Contributions, translations, testing, and responsible sponsorships help keep it free.',
-    starGithub: 'Star on GitHub ↗', supportProject: 'Support the project', protected: 'Protected', clean: 'No sensitive pattern found', copied: 'Copied to clipboard', downloaded: 'Safe prompt downloaded', addText: 'Add some text before scanning.'
+    navScanner:'Scanner', navHow:'How it works', navAccount:'Account safety', navAbout:'About', eyebrow:'Free • Open source • Local-first', heroLine1:'Scan before.', heroLine2:'Share safer.', heroText:'Check prompts, supported text files and links for exposed private data and common warning signs—without uploading or opening them.', startButton:'Start a local scan →', learnButton:'See what it checks', noUpload:'No uploads', noExecute:'No file execution', noAccount:'No account access', localScan:'LOCAL PRE-SCAN', visualPrivacy:'Private data redacted', visualFile:'Never executed', visualLink:'Warnings explained',
+    workspaceKicker:'LOCAL SECURITY WORKSPACE', workspaceTitle:'One place to check before you trust', browserOnly:'Processing stays in this browser', modeText:'Prompt / text', modeTextSub:'Redact private data', modeFile:'File check', modeFileSub:'Inspect supported text files', modeLink:'Link check', modeLinkSub:'Spot suspicious signals', inputTitle:'Paste text or a prompt', sample:'Try sample', clear:'Clear', inputPrivacy:'Input is never stored', promptTypeLabel:'Prompt type', typeGeneral:'General', typeEmail:'Email', typeResearch:'Research', typeCode:'Code / debugging', typeContent:'Content creation', scanButton:'Scan & protect', resultsTitle:'Review protected output', riskScore:'Risk score', emptyTitle:'Ready when you are', emptyText:'Paste text and run a local scan. Findings will appear here.', foundLabel:'Sensitive items found', protectionLabel:'Protection', safePrompt:'Safe text', improvedPrompt:'Improved prompt', copySafe:'Copy safe text', download:'Download .txt', copyImproved:'Copy improved prompt',
+    fileInputTitle:'Choose a file to pre-check', dropTitle:'Drop one file here or browse', dropText:'Text/code files up to 2 MB can be inspected and cleaned. Other files receive metadata warnings only.', chooseFile:'Choose file', safeBoundary:'Safe boundary:', fileBoundary:'the file is never opened as a program, executed, or uploaded.', fileScanButton:'Analyze file locally', fileResultsTitle:'Understand the warnings', fileEmptyTitle:'No file selected', fileEmptyText:'Choose one file to inspect its name, type, size, private data, and supported text content.', issuesFound:'Warnings found', inspectionLabel:'Content inspection', cleanedPreview:'Cleaned preview', copyCleaned:'Copy cleaned text', downloadCleaned:'Download cleaned file', inspected:'Completed', metadataOnly:'Metadata only', fileFullLimit:'Content was checked using local pattern rules. This is not a malware signature scan or sandbox.', fileMetaLimit:'This file was not opened or cleaned. Only its name, extension and size were checked. Use trusted antivirus before opening it.',
+    linkInputTitle:'Paste a link—do not open it', linkBoundary:'PromptShield analyzes the address as text. It never visits the destination.', linkScanButton:'Check link locally', linkResultsTitle:'Review link signals', linkEmptyTitle:'No link checked', linkEmptyText:'The checker explains visible URL risks without contacting the website.', domainLabel:'Domain', saferLink:'Cleaned link', copyLink:'Copy cleaned link', linkLimitation:'A low score does not prove a website is trustworthy. Verify the sender and domain before opening it.', disclaimer:'PromptShield is a local privacy and security pre-check—not a full antivirus, sandbox, reputation database, or guarantee. Review every result.',
+    howKicker:'THREE PRACTICAL CHECKS', howTitle:'Know what the tool can do', featureOneTitle:'Prompt & text privacy', featureOneText:'Detect and redact common emails, phone numbers, CNICs, cards, IP addresses, API keys and secret-filled URLs.', featureTwoTitle:'File pre-check & cleaning', featureTwoText:'Inspect filenames and supported text/code content, explain risky patterns, then create a cleaned local copy.', featureThreeTitle:'Link signal check', featureThreeText:'Spot unsafe protocols, lookalike domains, short links, hidden redirects, tracking and exposed secrets—without visiting the link.', accountKicker:'ACCOUNT SAFETY CHECKLIST', accountTitle:'Protect the account around the browser', accountText:'Use this local checklist for GitHub, Fiverr, LinkedIn and other accounts. PromptShield never asks for passwords, recovery codes, cookies, or account access.', readinessLabel:'readiness completed on this device', checkOneTitle:'Passkey or authenticator 2FA', checkOneText:'Avoid SMS when a stronger option is available.', checkTwoTitle:'Unique password in a password manager', checkTwoText:'Never reuse the same password across services.', checkThreeTitle:'Active sessions reviewed', checkThreeText:'Sign out unfamiliar devices and locations.', checkFourTitle:'Browser extensions audited', checkFourText:'Remove extensions you no longer trust or use.', checkFiveTitle:'Recovery options updated', checkFiveText:'Store recovery codes offline in a safe place.',
+    aboutKicker:'ABOUT PROMPTSHIELD', aboutTitle:'Useful protection, honest boundaries.', aboutText:'PromptShield AI is a free, open-source browser utility by Syed Areeb Ali under AI Tool Insider. It helps people catch visible privacy leaks and suspicious patterns before sharing content, opening links, or trusting a file.', aboutOne:'Runs locally with no server upload or analytics payload', aboutTwo:'Explains each warning in clear English or Roman Urdu', aboutThree:'Does not replace trusted antivirus, OS updates, backups, or account security controls', openKicker:'OPEN SOURCE • GLOBAL PUBLIC BENEFIT', openTitle:'Sponsor safer digital habits worldwide.', openText:'International sponsorship helps fund more file formats, accessibility, multilingual explanations, independent security review and community education—while keeping core checks free.', starGithub:'Star on GitHub ↗', supportProject:'Sponsor the roadmap', protected:'Protected', clean:'No warning pattern found', copied:'Copied to clipboard', downloaded:'File downloaded', addText:'Add some text before scanning.', addLink:'Paste a link before checking.', chooseFirst:'Choose a file first.'
   },
-  ur: {
-    eyebrow: 'مفت • اوپن سورس • مکمل مقامی', heroLine1: 'پرامپٹ شیئر کریں۔', heroLine2: 'ذاتی معلومات نہیں۔',
-    heroText: 'PromptShield آپ کی حساس معلومات کو ChatGPT، Gemini، Claude یا کسی دوسرے AI ٹول تک پہنچنے سے پہلے تلاش کرتا ہے۔ آپ کا متن اس براؤزر سے باہر نہیں جاتا۔',
-    startButton: 'پرامپٹ محفوظ کریں ←', learnButton: 'کام کرنے کا طریقہ', noLogin: 'لاگ اِن نہیں', noApi: 'API key نہیں', noUpload: 'متن اپلوڈ نہیں ہوتا', localScan: 'مقامی اسکین', risk: 'خطرہ',
-    workspaceKicker: 'پرائیویٹ ورک اسپیس', workspaceTitle: 'چند سیکنڈ میں پرامپٹ صاف کریں', browserOnly: 'تمام پراسیسنگ آپ کے براؤزر میں',
-    inputTitle: 'اپنا پرامپٹ پیسٹ کریں', sample: 'مثال آزمائیں', clear: 'صاف کریں', inputPrivacy: 'متن محفوظ نہیں کیا جاتا', promptTypeLabel: 'پرامپٹ کی قسم',
-    typeGeneral: 'عام', typeEmail: 'ای میل', typeResearch: 'تحقیق', typeCode: 'کوڈ / ڈیبگنگ', typeContent: 'کانٹینٹ', scanButton: 'اسکین اور محفوظ کریں',
-    resultsTitle: 'محفوظ نتیجہ دیکھیں', riskScore: 'خطرے کا اسکور', emptyTitle: 'اسکین کے لیے تیار', emptyText: 'پرامپٹ پیسٹ کرکے مقامی اسکین چلائیں۔ نتائج یہاں نظر آئیں گے۔',
-    foundLabel: 'حساس معلومات', protectionLabel: 'حفاظت', safePrompt: 'محفوظ پرامپٹ', improvedPrompt: 'بہتر پرامپٹ', copySafe: 'محفوظ پرامپٹ کاپی کریں', download: '.txt ڈاؤن لوڈ', copyImproved: 'بہتر پرامپٹ کاپی کریں',
-    disclaimer: 'PromptShield عام پیٹرنز تلاش کرتا ہے، مگر کوئی خودکار اسکینر کامل نہیں۔ شیئر کرنے سے پہلے نتیجہ ضرور دیکھیں۔',
-    howKicker: 'روزمرہ AI استعمال کے لیے', howTitle: 'ڈیزائن سے پرائیویٹ، استعمال میں آسان', featureOneTitle: 'تلاش', featureOneText: 'ای میل، فون، CNIC، کارڈ، IP، API keys اور خفیہ URLs تلاش کریں۔',
-    featureTwoTitle: 'حفاظت', featureTwoText: 'ذاتی معلومات کو واضح placeholders سے بدلیں اور پرامپٹ کو کارآمد رکھیں۔', featureThreeTitle: 'بہتری', featureThreeText: 'محفوظ متن کو مقصد، ضروریات اور آؤٹ پٹ کے ساتھ منظم پرامپٹ بنائیں۔',
-    privacyKicker: 'سرور کے بغیر پرائیویسی', privacyTitle: 'آپ کا پرامپٹ صرف آپ کا۔', privacyText: 'اسکینر واضح پیٹرن رولز کے ذریعے مکمل طور پر آپ کے براؤزر میں چلتا ہے۔ کوئی اکاؤنٹ، ٹریکنگ، ڈیٹابیس یا بیرونی AI درخواست نہیں۔',
-    privacyOne: 'AI API کے بغیر کام کرتا ہے', privacyTwo: 'پرامپٹ ہسٹری یا ٹریکنگ نہیں', privacyThree: 'واضح اور قابلِ جانچ اوپن سورس کوڈ',
-    openKicker: 'اوپن سورس، عوامی فائدہ', openTitle: 'روزمرہ AI کو محفوظ بنانے میں مدد کریں۔', openText: 'PromptShield AI کو Syed Areeb Ali، AI Tool Insider کے تحت برقرار رکھتے ہیں۔ تعاون، ترجمہ، ٹیسٹنگ اور ذمہ دار sponsorship اسے مفت رکھنے میں مدد دیتے ہیں۔',
-    starGithub: 'GitHub پر Star کریں ↗', supportProject: 'پروجیکٹ سپورٹ کریں', protected: 'محفوظ', clean: 'کوئی حساس پیٹرن نہیں ملا', copied: 'کلپ بورڈ پر کاپی ہوگیا', downloaded: 'محفوظ پرامپٹ ڈاؤن لوڈ ہوگیا', addText: 'اسکین سے پہلے کچھ متن شامل کریں۔'
+  roman: {
+    navScanner:'Scanner', navHow:'Kaise kaam karta hai', navAccount:'Account safety', navAbout:'Taaruf', eyebrow:'Muft • Open source • Local-first', heroLine1:'Pehle scan karein.', heroLine2:'Phir safe share karein.', heroText:'Prompts, supported text files aur links mein private data aur aam warning signs check karein—bina upload ya open kiye.', startButton:'Local scan shuru karein →', learnButton:'Dekhein kya check hota hai', noUpload:'Koi upload nahi', noExecute:'File run nahi hoti', noAccount:'Account access nahi', localScan:'LOCAL PRE-SCAN', visualPrivacy:'Private data redact hota hai', visualFile:'Kabhi execute nahi hoti', visualLink:'Warnings samjhayi jati hain',
+    workspaceKicker:'LOCAL SECURITY WORKSPACE', workspaceTitle:'Trust karne se pehle aik jagah check', browserOnly:'Processing isi browser mein rehti hai', modeText:'Prompt / text', modeTextSub:'Private data hataein', modeFile:'File check', modeFileSub:'Supported text files inspect karein', modeLink:'Link check', modeLinkSub:'Suspicious signals pehchanein', inputTitle:'Text ya prompt paste karein', sample:'Sample azmayein', clear:'Clear', inputPrivacy:'Input save nahi hota', promptTypeLabel:'Prompt type', typeGeneral:'General', typeEmail:'Email', typeResearch:'Research', typeCode:'Code / debugging', typeContent:'Content creation', scanButton:'Scan aur protect', resultsTitle:'Protected output review karein', riskScore:'Risk score', emptyTitle:'Scanner tayar hai', emptyText:'Text paste karke local scan chalayein. Findings yahan nazar ayengi.', foundLabel:'Sensitive items mile', protectionLabel:'Protection', safePrompt:'Safe text', improvedPrompt:'Behtar prompt', copySafe:'Safe text copy karein', download:'.txt download', copyImproved:'Behtar prompt copy karein',
+    fileInputTitle:'Pre-check ke liye file chunein', dropTitle:'Aik file yahan drop ya browse karein', dropText:'2 MB tak text/code files inspect aur clean ho sakti hain. Doosri files ka sirf metadata check hota hai.', chooseFile:'File chunein', safeBoundary:'Safe boundary:', fileBoundary:'file program ki tarah open, execute ya upload nahi hoti.', fileScanButton:'File locally analyze karein', fileResultsTitle:'Warnings ko samjhein', fileEmptyTitle:'File select nahi hui', fileEmptyText:'Naam, type, size, private data aur supported text content check karne ke liye aik file chunein.', issuesFound:'Warnings mile', inspectionLabel:'Content inspection', cleanedPreview:'Cleaned preview', copyCleaned:'Cleaned text copy karein', downloadCleaned:'Cleaned file download', inspected:'Mukammal', metadataOnly:'Sirf metadata', fileFullLimit:'Content local pattern rules se check hua. Yeh malware signature scan ya sandbox nahi hai.', fileMetaLimit:'File open ya clean nahi hui. Sirf naam, extension aur size check hua. Open karne se pehle trusted antivirus use karein.',
+    linkInputTitle:'Link paste karein—open na karein', linkBoundary:'PromptShield address ko text ki tarah analyze karta hai. Destination visit nahi hoti.', linkScanButton:'Link locally check karein', linkResultsTitle:'Link signals review karein', linkEmptyTitle:'Koi link check nahi hua', linkEmptyText:'Checker website se contact kiye baghair visible URL risks samjhata hai.', domainLabel:'Domain', saferLink:'Cleaned link', copyLink:'Cleaned link copy karein', linkLimitation:'Low score website ke trustworthy hone ki guarantee nahi. Open karne se pehle sender aur domain verify karein.', disclaimer:'PromptShield aik local privacy aur security pre-check hai—full antivirus, sandbox, reputation database ya guarantee nahi. Har result review karein.',
+    howKicker:'TEEN PRACTICAL CHECKS', howTitle:'Samjhein tool kya kar sakta hai', featureOneTitle:'Prompt aur text privacy', featureOneText:'Emails, phone numbers, CNICs, cards, IP addresses, API keys aur secret URLs dhoond kar redact karta hai.', featureTwoTitle:'File pre-check aur cleaning', featureTwoText:'Filename aur supported text/code content inspect karta, risky patterns samjhata aur cleaned local copy banata hai.', featureThreeTitle:'Link signal check', featureThreeText:'Unsafe protocol, lookalike domain, short link, hidden redirect, tracking aur exposed secret ko link visit kiye baghair check karta hai.', accountKicker:'ACCOUNT SAFETY CHECKLIST', accountTitle:'Browser ke sath account bhi protect karein', accountText:'GitHub, Fiverr, LinkedIn aur doosre accounts ke liye yeh local checklist use karein. PromptShield password, recovery code, cookie ya account access nahi mangta.', readinessLabel:'readiness isi device par mukammal', checkOneTitle:'Passkey ya authenticator 2FA', checkOneText:'Jahan strong option mile SMS se parhez karein.', checkTwoTitle:'Password manager mein unique password', checkTwoText:'Aik password mukhtalif services par dobara use na karein.', checkThreeTitle:'Active sessions review kiye', checkThreeText:'Unknown devices aur locations se sign out karein.', checkFourTitle:'Browser extensions audit ki', checkFourText:'Jin extensions par trust nahi ya use nahi, remove karein.', checkFiveTitle:'Recovery options update kiye', checkFiveText:'Recovery codes ko offline mehfooz jagah rakhein.',
+    aboutKicker:'PROMPTSHIELD KA TAARUF', aboutTitle:'Kaam ki protection, saaf limitations.', aboutText:'PromptShield AI, Syed Areeb Ali ka AI Tool Insider ke tehat muft open-source browser utility hai. Yeh content share, link open ya file trust karne se pehle visible privacy leaks aur suspicious patterns pakarne mein madad karta hai.', aboutOne:'Server upload aur analytics payload ke baghair locally chalta hai', aboutTwo:'Har warning English ya Roman Urdu mein samjhata hai', aboutThree:'Trusted antivirus, OS updates, backups aur account security controls ki jagah nahi leta', openKicker:'OPEN SOURCE • GLOBAL PUBLIC BENEFIT', openTitle:'Duniya bhar mein safer digital habits sponsor karein.', openText:'International sponsorship se mazeed file formats, accessibility, multilingual explanations, independent security review aur community education fund ho sakti hai—jabke core checks muft rahenge.', starGithub:'GitHub par Star karein ↗', supportProject:'Roadmap sponsor karein', protected:'Protected', clean:'Koi warning pattern nahi mila', copied:'Clipboard par copy ho gaya', downloaded:'File download ho gayi', addText:'Scan se pehle text add karein.', addLink:'Check se pehle link paste karein.', chooseFirst:'Pehle file chunein.'
   }
 };
 
-function t(key) {
-  return translations[currentLanguage][key] || translations.en[key] || key;
-}
+const findingNames = {
+  roman: {
+    'api-key':'API key ya secret', email:'Email address', cnic:'Pakistan CNIC', phone:'Phone number', ipv4:'IP address', 'secret-url':'URL mein secret', 'payment-card':'Payment card', 'executable-file':'Executable ya installable file', 'macro-file':'Macro-enabled office file', 'archive-file':'Archive ya disk image', 'double-extension':'Gumrah kun double extension', 'bidi-filename':'Chhupa filename direction control', 'large-file':'File local scan limit se bari hai', 'content-not-inspected':'Content inspect nahi hua', 'script-tag':'Executable script block', 'inline-script':'Inline browser script', 'javascript-url':'JavaScript URL', 'dynamic-code':'Dynamic code execution', 'shell-command':'High-risk shell command', 'redirect-code':'Forced redirect code', 'obfuscated-payload':'Encoded ya obfuscated payload', 'risky-links':'File ke andar risky links', 'dangerous-protocol':'Dangerous link protocol', 'invalid-url':'Invalid ya adhura link', 'unusual-protocol':'Unusual link protocol', 'no-https':'Connection HTTPS nahi', 'embedded-credentials':'Credentials ya deceptive @ symbol', 'punycode-domain':'Punycode / lookalike domain', 'ip-host':'Domain ki jagah direct IP', 'shortened-link':'Shortened destination', 'many-subdomains':'Bohat gehra subdomain', 'encoded-link':'Zyada encoded address', 'deceptive-domain-words':'Domain mein trust-bait alfaaz', 'secret-query':'Link mein secret ya session value', 'tracking-parameters':'Tracking parameters hata diye gaye', 'redirect-parameter':'Hidden redirect destination'
+  }
+};
+
+const findingDetails = {
+  roman: {
+    'executable-file':'Is type ki file device par code chala sakti hai.', 'macro-file':'Document open hone par macros actions chala sakte hain.', 'archive-file':'Compressed content is browser-only scanner se inspect nahi ho sakta.', 'double-extension':'Filename executable file ko chhupa sakta hai.', 'bidi-filename':'Invisible characters asli extension ko chhupa sakte hain.', 'large-file':'2 MB se bari file ka sirf metadata check hota hai.', 'content-not-inspected':'Yeh file type safe browser text inspection ke liye supported nahi.', 'dangerous-protocol':'Is link ko browser mein open na karein.', 'invalid-url':'Address ko safely parse nahi kiya ja saka.'
+  }
+};
+
+const t = key => translations[currentLanguage]?.[key] ?? translations.en[key] ?? key;
+const formatBytes = bytes => bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1048576).toFixed(1)} MB`;
+const labelFor = finding => findingNames[currentLanguage]?.[finding.id] || finding.label;
 
 function applyLanguage() {
-  document.documentElement.lang = currentLanguage === 'ur' ? 'ur' : 'en';
-  document.documentElement.dir = currentLanguage === 'ur' ? 'rtl' : 'ltr';
-  document.querySelectorAll('[data-i18n]').forEach(element => {
-    const key = element.dataset.i18n;
-    if (translations[currentLanguage][key]) element.textContent = translations[currentLanguage][key];
-  });
-  $('#languageToggle').textContent = currentLanguage === 'en' ? 'اردو' : 'EN';
-  promptInput.placeholder = currentLanguage === 'en'
-    ? 'Example: Email the report to alex@example.com and use API key sk-demo1234567890...'
-    : 'مثال: رپورٹ alex@example.com پر بھیجیں اور API key sk-demo1234567890 استعمال کریں...';
+  document.documentElement.lang = currentLanguage === 'roman' ? 'ur-Latn' : 'en';
+  document.documentElement.dir = 'ltr';
+  $$('[data-i18n]').forEach(node => { const value = t(node.dataset.i18n); if (value) node.textContent = value; });
+  $('#languageToggle').textContent = currentLanguage === 'en' ? 'Roman Urdu' : 'English';
   localStorage.setItem('promptshield-language', currentLanguage);
 }
 
-function showToast(message) {
-  toast.textContent = message;
-  toast.classList.add('show');
-  window.setTimeout(() => toast.classList.remove('show'), 2200);
+function showToast(message) { const toast = $('#toast'); toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 1800); }
+async function copyText(text) { if (!text) return; try { await navigator.clipboard.writeText(text); showToast(t('copied')); } catch { showToast('Copy failed'); } }
+function downloadText(text, name) { if (!text) return; const url = URL.createObjectURL(new Blob([text], { type:'text/plain;charset=utf-8' })); const link = document.createElement('a'); link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 0); showToast(t('downloaded')); }
+function setMeter(prefix, score, level) { $(`#${prefix}RiskScore`).textContent = score; $(`#${prefix}RiskMeter`).dataset.level = level; }
+function renderFindings(container, findings) {
+  container.replaceChildren();
+  if (!findings.length) findings = [{ id:'safe', label:t('clean'), severity:'safe', count:0 }];
+  findings.forEach(finding => { const item = document.createElement('div'); item.className = `finding-chip ${finding.severity}`; const dot = document.createElement('i'); const text = document.createElement('span'); const name = document.createElement('b'); name.textContent = labelFor(finding); text.append(name); if (finding.count) text.append(` × ${finding.count}`); const explanation = findingDetails[currentLanguage]?.[finding.id] || finding.detail; if (explanation) { const detail = document.createElement('small'); detail.textContent = explanation; text.append(detail); } item.append(dot, text); container.append(item); });
 }
+function setOutputTab(tab) { const safe = tab === 'safe'; $('#safeTab').classList.toggle('active', safe); $('#improvedTab').classList.toggle('active', !safe); $('#safePanel').hidden = !safe; $('#improvedPanel').hidden = safe; }
 
-function escapeHtml(value) {
-  return value.replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
-}
+$$('.mode-tab').forEach(button => button.addEventListener('click', () => {
+  $$('.mode-tab').forEach(tab => { const active = tab === button; tab.classList.toggle('active', active); tab.setAttribute('aria-selected', String(active)); });
+  $$('[data-mode-panel]').forEach(panel => { const active = panel.dataset.modePanel === button.dataset.mode; panel.hidden = !active; panel.classList.toggle('active', active); });
+}));
 
-function renderFindings(result) {
-  findingList.innerHTML = result.findings.length
-    ? result.findings.map(finding => `<span class="finding-chip ${finding.severity}"><i></i>${escapeHtml(finding.label)} <b>${finding.count}</b></span>`).join('')
-    : `<span class="finding-chip safe"><i></i>${escapeHtml(t('clean'))}</span>`;
-}
-
-function runScan() {
-  const input = promptInput.value.trim();
-  if (!input) {
-    showToast(t('addText'));
-    promptInput.focus();
-    return;
-  }
-  scanButton.classList.add('scanning');
-  scanButton.disabled = true;
-  window.setTimeout(() => {
-    const result = scanText(input);
-    currentSafeText = result.sanitized;
-    currentImprovedText = improvePrompt(result.sanitized, promptType.value);
-    safeOutput.textContent = currentSafeText;
-    improvedOutput.textContent = currentImprovedText;
-    findingCount.textContent = result.total;
-    $('#protectionStatus').textContent = result.total ? t('protected') : t('clean');
-    riskScore.textContent = result.score;
-    riskMeter.dataset.level = result.level;
-    renderFindings(result);
-    emptyState.hidden = true;
-    resultContent.hidden = false;
-    scanButton.classList.remove('scanning');
-    scanButton.disabled = false;
-  }, 280);
-}
-
-async function copyText(value) {
-  if (!value) return;
-  try {
-    await navigator.clipboard.writeText(value);
-  } catch {
-    const helper = document.createElement('textarea');
-    helper.value = value;
-    document.body.appendChild(helper);
-    helper.select();
-    document.execCommand('copy');
-    helper.remove();
-  }
-  showToast(t('copied'));
-}
-
-function setTab(tabName) {
-  const safeActive = tabName === 'safe';
-  $('#safeTab').classList.toggle('active', safeActive);
-  $('#safeTab').setAttribute('aria-selected', String(safeActive));
-  $('#improvedTab').classList.toggle('active', !safeActive);
-  $('#improvedTab').setAttribute('aria-selected', String(!safeActive));
-  $('#safePanel').hidden = !safeActive;
-  $('#safePanel').classList.toggle('active', safeActive);
-  $('#improvedPanel').hidden = safeActive;
-  $('#improvedPanel').classList.toggle('active', !safeActive);
-}
-
-promptInput.addEventListener('input', () => { charCount.textContent = promptInput.value.length; });
-promptInput.addEventListener('keydown', event => {
-  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') runScan();
+$('#promptInput').addEventListener('input', event => { $('#charCount').textContent = event.target.value.length; });
+$('#sampleButton').addEventListener('click', () => { $('#promptInput').value = 'Draft an update for Sara. Email: sara.khan@example.com, phone: +92 300 1234567, CNIC: 42101-1234567-1. Server: 192.168.1.42 and API key: sk-demoKey1234567890.'; $('#charCount').textContent = $('#promptInput').value.length; $('#promptType').value = 'email'; });
+$('#scanButton').addEventListener('click', () => {
+  const text = $('#promptInput').value.trim(); if (!text) return showToast(t('addText'));
+  const result = scanText(text); currentSafeText = result.sanitized; currentImprovedText = improvePrompt(result.sanitized, $('#promptType').value);
+  $('#riskScore').textContent = result.score; $('#riskMeter').dataset.level = result.level; $('#findingCount').textContent = result.total; $('#protectionStatus').textContent = result.total ? t('protected') : t('clean'); $('#safeOutput').textContent = currentSafeText; $('#improvedOutput').textContent = currentImprovedText; renderFindings($('#findingList'), result.findings); $('#emptyState').hidden = true; $('#resultContent').hidden = false; setOutputTab('safe');
 });
-scanButton.addEventListener('click', runScan);
-sampleButton.addEventListener('click', () => {
-  promptInput.value = 'Draft a project update for client Sara. Email: sara.khan@example.com, phone: +92 300 1234567, CNIC: 42101-1234567-1. The staging server is 192.168.1.42 and the API key is sk-demoKey1234567890.';
-  charCount.textContent = promptInput.value.length;
-  promptType.value = 'email';
-  promptInput.focus();
-});
-clearButton.addEventListener('click', () => {
-  promptInput.value = '';
-  charCount.textContent = '0';
-  resultContent.hidden = true;
-  emptyState.hidden = false;
-  riskScore.textContent = '0';
-  riskMeter.dataset.level = 'safe';
-  currentSafeText = '';
-  currentImprovedText = '';
-});
-$('#copySafeButton').addEventListener('click', () => copyText(currentSafeText));
-$('#copyImprovedButton').addEventListener('click', () => copyText(currentImprovedText));
-$('#safeTab').addEventListener('click', () => setTab('safe'));
-$('#improvedTab').addEventListener('click', () => setTab('improved'));
-$('#downloadButton').addEventListener('click', () => {
-  if (!currentSafeText) return;
-  const blob = new Blob([currentSafeText], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'promptshield-safe-prompt.txt';
-  link.click();
-  URL.revokeObjectURL(url);
-  showToast(t('downloaded'));
-});
-$('#languageToggle').addEventListener('click', () => {
-  currentLanguage = currentLanguage === 'en' ? 'ur' : 'en';
-  applyLanguage();
-});
-$('#themeToggle').addEventListener('click', () => {
-  document.body.classList.toggle('light-theme');
-  $('#themeToggle').textContent = document.body.classList.contains('light-theme') ? '☾' : '☼';
-});
+$('#clearButton').addEventListener('click', () => { $('#promptInput').value = ''; $('#charCount').textContent = '0'; $('#resultContent').hidden = true; $('#emptyState').hidden = false; $('#riskScore').textContent = '0'; $('#riskMeter').dataset.level = 'safe'; currentSafeText = ''; currentImprovedText = ''; });
+$('#safeTab').addEventListener('click', () => setOutputTab('safe')); $('#improvedTab').addEventListener('click', () => setOutputTab('improved')); $('#copySafeButton').addEventListener('click', () => copyText(currentSafeText)); $('#copyImprovedButton').addEventListener('click', () => copyText(currentImprovedText)); $('#downloadButton').addEventListener('click', () => downloadText(currentSafeText, 'promptshield-safe-text.txt'));
 
-document.querySelector('#year').textContent = new Date().getFullYear();
-applyLanguage();
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(() => {}));
+function chooseFile(file) {
+  selectedFile = file || null; cleanedFile = { text:'', name:'' }; $('#fileScanButton').disabled = !selectedFile;
+  if (!selectedFile) { $('#selectedFile').hidden = true; $('#fileResultContent').hidden = true; $('#fileEmptyState').hidden = false; setMeter('file', 0, 'safe'); return; }
+  $('#selectedFile').hidden = false; $('#fileName').textContent = selectedFile.name; $('#fileSize').textContent = `${formatBytes(selectedFile.size)} • ${selectedFile.type || 'type not declared'}`; $('#fileExtension').textContent = (selectedFile.name.split('.').pop() || 'FILE').slice(0, 5).toUpperCase();
 }
+$('#fileInput').addEventListener('change', event => chooseFile(event.target.files[0]));
+['dragenter','dragover'].forEach(type => $('#dropZone').addEventListener(type, event => { event.preventDefault(); $('#dropZone').classList.add('dragging'); }));
+['dragleave','drop'].forEach(type => $('#dropZone').addEventListener(type, event => { event.preventDefault(); $('#dropZone').classList.remove('dragging'); }));
+$('#dropZone').addEventListener('drop', event => chooseFile(event.dataTransfer.files[0]));
+$('#clearFileButton').addEventListener('click', () => { $('#fileInput').value = ''; chooseFile(null); });
+$('#fileScanButton').addEventListener('click', async () => {
+  if (!selectedFile) return showToast(t('chooseFirst'));
+  const metadata = analyzeFileMetadata(selectedFile); let findings = [...metadata.findings]; let score = metadata.score; let level = metadata.level;
+  cleanedFile = { text:'', name:'' };
+  if (metadata.inspectable) { const content = await selectedFile.text(); const contentResult = scanFileContent(content, metadata.name); findings = [...metadata.findings, ...contentResult.findings]; score = Math.max(metadata.score, contentResult.score); level = score === 0 ? 'safe' : score < 30 ? 'low' : score < 60 ? 'medium' : 'high'; cleanedFile = { text:contentResult.cleaned, name:contentResult.cleanedName }; $('#cleanedFileOutput').textContent = contentResult.cleaned; $('#cleanedFileArea').hidden = false; $('#fileInspectionStatus').textContent = t('inspected'); $('#fileLimitation').textContent = t('fileFullLimit'); }
+  else { $('#cleanedFileArea').hidden = true; $('#fileInspectionStatus').textContent = t('metadataOnly'); $('#fileLimitation').textContent = t('fileMetaLimit'); }
+  const total = findings.reduce((sum, finding) => sum + (finding.count || 1), 0); setMeter('file', score, level); $('#fileFindingCount').textContent = total; renderFindings($('#fileFindingList'), findings); $('#fileEmptyState').hidden = true; $('#fileResultContent').hidden = false;
+});
+$('#copyCleanedFileButton').addEventListener('click', () => copyText(cleanedFile.text)); $('#downloadCleanedFileButton').addEventListener('click', () => downloadText(cleanedFile.text, cleanedFile.name));
+
+$('#linkSampleButton').addEventListener('click', () => { $('#linkInput').value = 'http://secure-account.example.com/login?redirect=https%3A%2F%2Fother.example&token=private-demo&utm_source=email'; });
+$('#linkScanButton').addEventListener('click', () => { const raw = $('#linkInput').value.trim(); if (!raw) return showToast(t('addLink')); const result = analyzeUrl(raw); safeLink = result.safeUrl || ''; setMeter('link', result.score, result.level); $('#linkFindingCount').textContent = result.total; $('#linkHostname').textContent = result.hostname || '—'; renderFindings($('#linkFindingList'), result.findings); $('#safeLinkOutput').textContent = safeLink; $('#safeLinkArea').hidden = !safeLink; $('#linkEmptyState').hidden = true; $('#linkResultContent').hidden = false; });
+$('#clearLinkButton').addEventListener('click', () => { $('#linkInput').value = ''; $('#linkResultContent').hidden = true; $('#linkEmptyState').hidden = false; setMeter('link', 0, 'safe'); safeLink = ''; }); $('#copySafeLinkButton').addEventListener('click', () => copyText(safeLink));
+
+function updateReadiness() { const boxes = $$('#accountChecklist input'); const checked = boxes.filter(box => box.checked).length; $('#readinessScore').textContent = `${Math.round(checked / boxes.length * 100)}%`; localStorage.setItem('promptshield-account-checks', JSON.stringify(boxes.map(box => box.checked))); }
+try { const stored = JSON.parse(localStorage.getItem('promptshield-account-checks') || '[]'); $$('#accountChecklist input').forEach((box, index) => { box.checked = Boolean(stored[index]); }); } catch {}
+$$('#accountChecklist input').forEach(box => box.addEventListener('change', updateReadiness)); updateReadiness();
+
+$('#languageToggle').addEventListener('click', () => { currentLanguage = currentLanguage === 'en' ? 'roman' : 'en'; applyLanguage(); });
+$('#themeToggle').addEventListener('click', () => { document.body.classList.toggle('light-theme'); $('#themeToggle').textContent = document.body.classList.contains('light-theme') ? '☾' : '☼'; });
+$('#year').textContent = new Date().getFullYear(); applyLanguage();
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(() => {}));

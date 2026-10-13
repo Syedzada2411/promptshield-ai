@@ -1,0 +1,12 @@
+{
+  "name": "PromptShield AI",
+  "short_name": "PromptShield",
+  "description": "A privacy-first, local prompt cleaner for everyday AI use.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#07111f",
+  "theme_color": "#07111f",
+  "icons": [
+    {"src": "assets/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+  ]
+}

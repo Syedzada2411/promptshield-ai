@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="PromptShield AI removes sensitive information from prompts locally in your browser before you share them with AI tools.">
+  <meta name="theme-color" content="#07111f">
+  <meta property="og:title" content="PromptShield AI — Privacy-first prompt cleaner">
+  <meta property="og:description" content="Detect and redact emails, phone numbers, CNICs, payment cards, API keys and more. Free, open source, and local-first.">
+  <title>PromptShield AI — Clean private data before using AI</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css?v=1.0.1">
+</head>
+<body>
+  <a class="skip-link" href="#workspace">Skip to scanner</a>
+  <div class="noise" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="PromptShield AI home">
+      <span class="brand-mark" aria-hidden="true">PS</span>
+      <span>PromptShield <b>AI</b></span>
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="#how">How it works</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#open-source">Open source</a>
+    </nav>
+    <div class="header-actions">
+      <button class="icon-button" id="languageToggle" type="button" aria-label="Switch language">اردو</button>
+      <button class="icon-button" id="themeToggle" type="button" aria-label="Toggle color theme">☼</button>
+      <a class="github-button" href="https://github.com/Syedzada2411/promptshield-ai" target="_blank" rel="noreferrer">GitHub ↗</a>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <div class="eyebrow"><span></span><span data-i18n="eyebrow">Free • Open source • Local-first</span></div>
+        <h1 id="hero-title"><span data-i18n="heroLine1">Share prompts.</span><br><em data-i18n="heroLine2">Not private data.</em></h1>
+        <p data-i18n="heroText">PromptShield finds sensitive information before it reaches ChatGPT, Gemini, Claude, or any other AI tool. Your text never leaves this browser.</p>
+        <div class="hero-actions">
+          <a class="primary-button" href="#workspace" data-i18n="startButton">Protect a prompt →</a>
+          <a class="secondary-button" href="#how" data-i18n="learnButton">See how it works</a>
+        </div>
+        <div class="trust-row" aria-label="Privacy promises">
+          <span>✓ <span data-i18n="noLogin">No login</span></span>
+          <span>✓ <span data-i18n="noApi">No API key</span></span>
+          <span>✓ <span data-i18n="noUpload">No text uploaded</span></span>
+        </div>
+      </div>
+
+      <aside class="hero-visual" aria-label="Privacy scan preview">
+        <div class="scan-orbit orbit-one"></div>
+        <div class="scan-orbit orbit-two"></div>
+        <div class="shield-visual">
+          <div class="shield-core">✓</div>
+          <span class="shield-label" data-i18n="localScan">LOCAL SCAN</span>
+        </div>
+        <div class="floating-card card-email"><b>EMAIL</b><span>alex•••@mail.com</span></div>
+        <div class="floating-card card-key"><b>API KEY</b><span>sk-••••••••</span></div>
+        <div class="floating-card card-score"><b data-i18n="risk">RISK</b><span>84 → 0</span></div>
+      </aside>
+    </section>
+
+    <section class="workspace-section" id="workspace" aria-labelledby="workspace-title">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker" data-i18n="workspaceKicker">PRIVATE WORKSPACE</span>
+          <h2 id="workspace-title" data-i18n="workspaceTitle">Clean your prompt in seconds</h2>
+        </div>
+        <div class="local-pill"><span class="pulse"></span><span data-i18n="browserOnly">Processing stays in your browser</span></div>
+      </div>
+
+      <div class="tool-shell">
+        <section class="input-panel" aria-labelledby="input-title">
+          <div class="panel-topline">
+            <div>
+              <span class="step-number">01</span>
+              <h3 id="input-title" data-i18n="inputTitle">Paste your prompt</h3>
+            </div>
+            <div class="panel-actions">
+              <button class="text-button" id="sampleButton" type="button" data-i18n="sample">Try sample</button>
+              <button class="text-button danger" id="clearButton" type="button" data-i18n="clear">Clear</button>
+            </div>
+          </div>
+          <label class="sr-only" for="promptInput">Prompt to scan</label>
+          <textarea id="promptInput" maxlength="12000" spellcheck="true" placeholder="Example: Email the report to alex@example.com and use API key sk-demo1234567890..."></textarea>
+          <div class="input-meta">
+            <span><span id="charCount">0</span> / 12,000</span>
+            <span data-i18n="inputPrivacy">Input is never stored</span>
+          </div>
+          <div class="controls-row">
+            <label for="promptType" data-i18n="promptTypeLabel">Prompt type</label>
+            <select id="promptType">
+              <option value="general" data-i18n="typeGeneral">General</option>
+              <option value="email" data-i18n="typeEmail">Email</option>
+              <option value="research" data-i18n="typeResearch">Research</option>
+              <option value="code" data-i18n="typeCode">Code / debugging</option>
+              <option value="content" data-i18n="typeContent">Content creation</option>
+            </select>
+            <button class="scan-button" id="scanButton" type="button"><span data-i18n="scanButton">Scan & protect</span><span aria-hidden="true">↗</span></button>
+          </div>
+        </section>
+
+        <section class="results-panel" aria-labelledby="results-title">
+          <div class="panel-topline">
+            <div>
+              <span class="step-number">02</span>
+              <h3 id="results-title" data-i18n="resultsTitle">Review protected output</h3>
+            </div>
+            <div class="risk-meter" id="riskMeter" data-level="safe">
+              <span data-i18n="riskScore">Risk score</span>
+              <strong id="riskScore">0</strong><small>/100</small>
+            </div>
+          </div>
+
+          <div class="empty-state" id="emptyState">
+            <div class="empty-icon">⌁</div>
+            <h4 data-i18n="emptyTitle">Ready when you are</h4>
+            <p data-i18n="emptyText">Paste a prompt and run a local scan. Findings will appear here.</p>
+          </div>
+
+          <div class="result-content" id="resultContent" hidden>
+            <div class="summary-bar">
+              <div><span data-i18n="foundLabel">Sensitive items found</span><strong id="findingCount">0</strong></div>
+              <div><span data-i18n="protectionLabel">Protection</span><strong id="protectionStatus">Protected</strong></div>
+            </div>
+            <div class="finding-list" id="findingList" aria-live="polite"></div>
+
+            <div class="output-tabs" role="tablist" aria-label="Output view">
+              <button class="output-tab active" id="safeTab" role="tab" aria-selected="true" aria-controls="safePanel" type="button" data-i18n="safePrompt">Safe prompt</button>
+              <button class="output-tab" id="improvedTab" role="tab" aria-selected="false" aria-controls="improvedPanel" type="button" data-i18n="improvedPrompt">Improved prompt</button>
+            </div>
+            <div class="output-panel active" id="safePanel" role="tabpanel" aria-labelledby="safeTab">
+              <pre id="safeOutput"></pre>
+              <div class="output-actions">
+                <button class="copy-button" id="copySafeButton" type="button" data-i18n="copySafe">Copy safe prompt</button>
+                <button class="download-button" id="downloadButton" type="button" data-i18n="download">Download .txt</button>
+              </div>
+            </div>
+            <div class="output-panel" id="improvedPanel" role="tabpanel" aria-labelledby="improvedTab" hidden>
+              <pre id="improvedOutput"></pre>
+              <div class="output-actions">
+                <button class="copy-button" id="copyImprovedButton" type="button" data-i18n="copyImproved">Copy improved prompt</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+      <p class="disclaimer" data-i18n="disclaimer">PromptShield catches common patterns, but no automated scanner is perfect. Always review the result before sharing it.</p>
+    </section>
+
+    <section class="how-section" id="how" aria-labelledby="how-title">
+      <div class="section-heading centered">
+        <span class="section-kicker" data-i18n="howKicker">BUILT FOR EVERYDAY AI USE</span>
+        <h2 id="how-title" data-i18n="howTitle">Private by design, simple by default</h2>
+      </div>
+      <div class="feature-grid">
+        <article class="feature-card"><span>01</span><div class="feature-icon">◎</div><h3 data-i18n="featureOneTitle">Detect</h3><p data-i18n="featureOneText">Find emails, phone numbers, CNICs, cards, IP addresses, API keys and secret-filled URLs.</p></article>
+        <article class="feature-card featured"><span>02</span><div class="feature-icon">◈</div><h3 data-i18n="featureTwoTitle">Protect</h3><p data-i18n="featureTwoText">Replace private values with clear placeholders while keeping your prompt useful.</p></article>
+        <article class="feature-card"><span>03</span><div class="feature-icon">↗</div><h3 data-i18n="featureThreeTitle">Improve</h3><p data-i18n="featureThreeText">Turn the safe text into a structured prompt with a goal, requirements, and output format.</p></article>
+      </div>
+    </section>
+
+    <section class="privacy-section" id="privacy">
+      <div class="privacy-copy">
+        <span class="section-kicker" data-i18n="privacyKicker">ZERO-SERVER PRIVACY</span>
+        <h2 data-i18n="privacyTitle">Your prompt stays yours.</h2>
+        <p data-i18n="privacyText">The scanner runs entirely in your browser using transparent pattern-matching rules. There is no account, analytics payload, prompt database, or external AI request.</p>
+        <ul>
+          <li><span>✓</span><span data-i18n="privacyOne">Works without an AI API</span></li>
+          <li><span>✓</span><span data-i18n="privacyTwo">No prompt history or tracking</span></li>
+          <li><span>✓</span><span data-i18n="privacyThree">Readable, auditable open-source code</span></li>
+        </ul>
+      </div>
+      <div class="code-window" aria-label="Local processing example">
+        <div class="window-bar"><span></span><span></span><span></span><small>privacy-engine.js</small></div>
+        <pre><code><span class="code-muted">// Your text stays on this device</span>
+<span class="code-keyword">const</span> result = scanLocally(prompt);
+
+result.uploaded  <span class="code-accent">// false</span>
+result.tracked   <span class="code-accent">// false</span>
+result.protected <span class="code-accent">// true</span></code></pre>
+      </div>
+    </section>
+
+    <section class="open-source-section" id="open-source">
+      <div>
+        <span class="section-kicker" data-i18n="openKicker">OPEN SOURCE, PUBLIC BENEFIT</span>
+        <h2 data-i18n="openTitle">Help make everyday AI safer.</h2>
+        <p data-i18n="openText">PromptShield AI is maintained by Syed Areeb Ali under the AI Tool Insider initiative. Contributions, translations, testing, and responsible sponsorships help keep it free.</p>
+      </div>
+      <div class="support-actions">
+        <a class="primary-button" href="https://github.com/Syedzada2411/promptshield-ai" target="_blank" rel="noreferrer" data-i18n="starGithub">Star on GitHub ↗</a>
+        <a class="secondary-button" href="https://github.com/sponsors/Syedzada2411" target="_blank" rel="noreferrer" data-i18n="supportProject">Support the project</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="brand" href="#top"><span class="brand-mark">PS</span><span>PromptShield <b>AI</b></span></a>
+    <p>Built by <a href="https://github.com/Syedzada2411" target="_blank" rel="noreferrer">Syed Areeb Ali</a> • AI Tool Insider</p>
+    <p>Open source • MIT License • <span id="year"></span></p>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="app.js?v=1.0.1"></script>
+</body>
+</html>

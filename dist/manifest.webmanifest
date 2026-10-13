@@ -1,7 +1,7 @@
 {
-  "name": "PromptShield AI",
+  "name": "PromptShield AI Security Workspace",
   "short_name": "PromptShield",
-  "description": "A privacy-first, local prompt cleaner for everyday AI use.",
+  "description": "A local-first privacy and security pre-check for prompts, supported text files and links.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#07111f",
